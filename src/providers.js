@@ -1,5 +1,5 @@
 /** Small provider registry: source adapters can register without coupling their
- *  details to the UI. Spotify is intentionally an external link handoff only. */
+ *  details to the UI. Spotify URI parsing stays provider-agnostic. */
 export class ProviderRegistry {
   constructor() { this.providers = new Map(); }
   register(provider) {
@@ -31,8 +31,8 @@ const SPOTIFY_TYPES = new Set(['track', 'playlist', 'album', 'artist', 'show', '
 const SPOTIFY_ID = /^[A-Za-z0-9]+$/;
 
 export class SpotifyLinkProvider {
-  id = 'spotify-link';
-  name = 'Spotify (external)';
+  id = 'spotify';
+  name = 'Spotify';
 
   parse(input) {
     const value = String(input || '').trim();

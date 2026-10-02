@@ -10,15 +10,16 @@
 <body><main>
   <div class="eyebrow">AMPDECK / PRIVACY NOTICE</div>
   <h1>Your music stays yours.</h1>
-  <p><strong>Last updated: October 2, 2026.</strong> Ampdeck is a static, browser-only music player. It has no Ampdeck backend, analytics, advertising, or account system.</p>
-  <h2>Spotify</h2>
-  <p>Ampdeck does not embed Spotify or access Spotify APIs. If you paste a supported Spotify link and choose Open, Ampdeck opens its canonical Spotify URL in a separate tab. Spotify handles any login, playback, cookies, account access, and personal data under its own terms and privacy policy. Ampdeck does not receive your Spotify password, API token, account profile, or playback history.</p>
-  <p>After you leave Ampdeck, Spotify may set cookies and process data in its own site or app. Review <a href="https://www.spotify.com/us/legal/privacy-policy/" target="_blank" rel="noreferrer">Spotify's privacy policy</a> and manage cookies there or in your browser. Spotify determines playback availability and any free-trial eligibility; Ampdeck does not grant trials.</p>
+  <p><strong>Last updated: October 2, 2026.</strong> Ampdeck is a static, non-commercial browser prototype. It has no Ampdeck account system, analytics, advertising, or token backend.</p>
+  <h2>Spotify login and playback</h2>
+  <p>If you choose Spotify, Ampdeck uses Spotify's official Web Playback SDK and Web API. Login is handled by Spotify through OAuth Authorization Code with PKCE. Ampdeck does not ask for or receive your Spotify password. The app's public Client ID is saved in browser local storage; OAuth access and refresh tokens are stored in the current tab's session storage and cleared when you disconnect. Do not use this prototype on a shared or untrusted browser session.</p>
+  <p>Your browser sends authorization, search, and playback requests directly to Spotify. Spotify serves the protected audio to its Web Playback SDK; Ampdeck does not receive, record, download, or analyze Spotify audio. Spotify processes your account and playback data under its own <a href="https://www.spotify.com/legal/privacy-policy/" target="_blank" rel="noreferrer">privacy policy</a> and terms. Spotify Premium is required for Web Playback SDK streaming.</p>
+  <p>Spotify track metadata and album art are displayed with Spotify attribution and links to the relevant track. The classic visualizer receives no Spotify audio signal. Local and Spotify playback are kept separate and are never mixed by Ampdeck.</p>
   <h2>Local audio and skins</h2>
-  <p>Audio files and classic skin archives you choose are read locally by your browser and are not uploaded by Ampdeck. They remain in use only for this page session. Your pasted Spotify link is held only in the current page session. The selected color palette is saved in local storage.</p>
+  <p>Audio files and classic skin archives you select are read by your browser and are not uploaded by Ampdeck. Imported file blobs are kept for the current page session. Your selected color palette and Spotify Client ID are saved in local storage; OAuth tokens remain in session storage.</p>
   <h2>Third parties</h2>
-  <p>Spotify links open Spotify services and are subject to Spotify's terms and privacy policy. The page loads fonts from Google Fonts. No Spotify content or Spotify widget is loaded into Ampdeck, and no third-party analytics or tracking is included.</p>
+  <p>If you choose to connect Spotify, the page loads Spotify's Web Playback SDK and sends OAuth, search, and playback requests directly to Spotify. Fonts load from Google Fonts. No third-party analytics or advertising trackers are included. Spotify and Google may process network data according to their own policies when their resources are requested.</p>
   <h2>Questions</h2>
-  <p>Ampdeck is an open-source prototype. See the <a href="terms.html">user terms</a> and <a href="https://github.com/moai-heads/ampdeck">source repository</a> to inspect its behavior.</p>
+  <p>Ampdeck is open-source and is not affiliated with or endorsed by Spotify or Winamp. See the <a href="terms.html">user terms</a> and <a href="https://github.com/moai-heads/ampdeck">source repository</a>.</p>
   <p><a href="./">← Back to Ampdeck</a></p>
 </main></body></html>

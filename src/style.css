@@ -307,3 +307,33 @@ body[data-theme="ember"] .spotify-icon { color: #ffb37a; }
   .lower-copy p { font-size: 7px; }
   .text-button { width: 55px; white-space: normal; }
 }
+
+/* Official Spotify Web Playback SDK connection and search panel. */
+[hidden] { display: none !important; }
+.spotify-field-label { display: block; margin: 0 0 5px; color: #929988; font: 7px var(--mono); letter-spacing: .55px; }
+.spotify-help { margin: 7px 0 0; color: #7f8775; font: 7px/1.5 var(--mono); overflow-wrap: anywhere; }
+.spotify-help code { color: #bbc79f; }
+.spotify-search-row { margin-top: 2px; }
+.spotify-results { max-height: 138px; }
+.spotify-uri-form { margin-top: 5px; }
+.spotify-disconnect { border: 0; background: transparent; color: #929889; padding: 6px 0 2px; font-size: 8px; cursor: pointer; }
+.spotify-disconnect:hover { color: var(--acid); }
+.spotify-result-link { text-decoration: none; }
+
+.spotify-card { min-height: 0; }
+.spotify-uri-form { margin-top: 5px; }
+.spotify-result-link { flex: 0 0 22px; display: grid; place-items: center; }
+.spotify-disconnect:focus-visible, .spotify-result-play:focus-visible, .spotify-result-link:focus-visible { outline: 1px solid var(--acid); outline-offset: 1px; }
+@media (max-width: 560px) {
+  .spotify-help { font-size: 6px; }
+  .spotify-results { max-height: 165px; }
+}
+.spotify-help a { color: #c4d39c; text-decoration: underline; text-underline-offset: 2px; }
+.spotify-help a:hover { color: var(--acid); }
+.mini-meta a { color: #a6ce78; font: 7px var(--mono); letter-spacing: .3px; text-decoration: none; }
+.mini-meta a:hover { color: var(--acid); }
+
+/* Spotify attribution mark downloaded from Spotify's official design assets. */
+.spotify-brand-link { display: inline-flex; align-items: center; flex: 0 0 auto; }
+.spotify-logo { display: block; width: 78px; height: 33px; object-fit: contain; }
+.spotify-policy-note { margin: 7px 0 0; color: #777e70; font: 7px/1.5 var(--mono); }

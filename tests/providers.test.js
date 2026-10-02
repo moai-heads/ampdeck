@@ -5,9 +5,9 @@ import { LocalAudioProvider, SpotifyLinkProvider, providerRegistry } from '../sr
 const spotify = new SpotifyLinkProvider();
 const id = '4uLU6hMCjMI75M1A2tKUQC';
 
-test('provider registry contains local audio and external Spotify link adapters', () => {
-  assert.deepEqual(providerRegistry.list().map(({ id }) => id), ['local', 'spotify-link']);
-  assert.equal(providerRegistry.get('spotify-link').name, 'Spotify (external)');
+test('provider registry exposes local audio and Spotify providers', () => {
+  assert.deepEqual(providerRegistry.list().map(({ id }) => id), ['local', 'spotify']);
+  assert.equal(providerRegistry.get('spotify').name, 'Spotify');
 });
 
 test('local provider accepts common audio file types and describes files', () => {

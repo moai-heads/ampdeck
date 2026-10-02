@@ -1,10 +1,11 @@
 import { providerRegistry } from './providers.js';
+import { spotifyPlayback, makeSpotifyTrack } from './spotify.js';
+import { SpotifyMediaAdapter } from './spotify-media.js';
 import './style.css';
 
 const BASE = import.meta.env.BASE_URL;
 const localProvider = providerRegistry.get('local');
-const spotifyProvider = providerRegistry.get('spotify-link');
-const localControls = ['import-top', 'import-button', 'drop-target', 'play-button', 'next-button'];
+const spotifyProvider = providerRegistry.get('spotify');
 const esc = (value = '') => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const icon = (name, size = 18) => {
   const paths = {
@@ -57,7 +58,7 @@ app.innerHTML = `
         <div class="crumb"><span>AMPDECK</span><i>/</i><b>LISTENING DESK</b></div>
         <div class="top-actions">
           <span class="clock-label"><span class="green-led"></span> YOUR MUSIC, YOUR MACHINE</span>
-          <button class="connect-pill" id="connect-top">${icon('spotify', 17)} <span>Open Spotify</span> ${icon('arrow', 14)}</button>
+          <button class="connect-pill" id="connect-top"><span>Connect Spotify</span> ${icon('arrow', 14)}</button>
           <button class="avatar-button" title="Customize appearance" id="theme-button">A</button>
         </div>
       </header>
@@ -93,7 +94,7 @@ app.innerHTML = `
             <div class="transport-row">
               <div class="now-playing-mini">
                 <div class="mini-art" id="mini-art"><img src="${BASE}cover.svg" alt="Abstract record artwork"></div>
-                <div class="mini-meta"><span class="micro-label">ON DECK</span><b id="track-title">Night Shift (demo)</b><span id="track-artist">Ampdeck Generator</span></div>
+                <div class="mini-meta"><span class="micro-label" id="now-playing-source">LOCAL AUDIO</span><b id="track-title">Night Shift (demo)</b><span id="track-artist">Ampdeck Generator</span><a id="spotify-attribution" hidden target="_blank" rel="noreferrer">OPEN IN SPOTIFY ↗</a></div>
               </div>
               <div class="transport-hint"><span class="keycap">DRAG</span> audio files anywhere onto the desk</div>
               <button class="square-button" id="play-button" title="Play or pause">${icon('play', 16)}</button>
@@ -103,15 +104,31 @@ app.innerHTML = `
 
           <aside class="side-column">
             <section class="spotify-card" id="spotify-card">
-              <div class="card-head"><span class="card-icon spotify-icon">${icon('spotify', 18)}</span><span class="service-status"><span class="status-dot"></span> OPEN IN SPOTIFY</span></div>
-              <div class="spotify-title-row"><div><div class="micro-label">EXTERNAL SERVICE / 01</div><h2>Spotify</h2></div><div class="spot-orbit"><span></span><span></span><span></span></div></div>
-              <p class="spotify-copy" id="spotify-copy">Open a Spotify link in Spotify’s own site or app. Ampdeck never asks for your Spotify password or API key.</p>
-              <form class="spotify-url-row" id="spotify-open-form">
-                <input id="spotify-url" type="text" inputmode="url" placeholder="Paste a Spotify link or URI" aria-label="Spotify link or URI" autocomplete="off">
-                <button type="submit" aria-label="Open in Spotify">OPEN</button>
-              </form>
-              <div class="spotify-shortcuts"><a href="https://open.spotify.com/" target="_blank" rel="noreferrer">Sign in / open Spotify ${icon('external', 11)}</a><a href="https://www.spotify.com/us/premium/" target="_blank" rel="noreferrer">Plans & trial info ${icon('external', 11)}</a></div>
-              <div class="spotify-foot"><span>LOGIN & PLAYBACK BY SPOTIFY</span><span class="legal-links"><a href="${BASE}terms.html" target="_blank" rel="noreferrer">TERMS</a><a href="${BASE}privacy.html" target="_blank" rel="noreferrer">PRIVACY</a></span></div>
+              <div class="card-head"><a class="spotify-brand-link" href="https://open.spotify.com/" target="_blank" rel="noreferrer" aria-label="Open Spotify"><img class="spotify-logo" src="${BASE}spotify-logo.svg" alt="Spotify"></a><span class="service-status"><span class="status-dot" id="spotify-status-dot"></span><span id="spotify-status">SPOTIFY DISCONNECTED</span></span></div>
+              <div class="spotify-title-row"><div><div class="micro-label">SPOTIFY WEB PLAYBACK SDK</div><h2>Spotify player</h2></div><div class="spot-orbit"><span></span><span></span><span></span></div></div>
+              <p class="spotify-copy" id="spotify-copy">Connect a Spotify account. Ampdeck’s classic skin drives Spotify’s Web Playback SDK; Premium is required.</p>
+              <div id="spotify-setup">
+                <label class="spotify-field-label" for="spotify-client-id">SPOTIFY DEVELOPER CLIENT ID</label>
+                <form class="spotify-url-row" id="spotify-connect-form">
+                  <input id="spotify-client-id" type="text" inputmode="text" placeholder="Paste Client ID (not a secret)" aria-label="Spotify Developer Client ID" autocomplete="off" spellcheck="false">
+                  <button type="submit" id="spotify-connect-button">CONNECT</button>
+                </form>
+                <div class="spotify-help">Client ID is public; never enter a client secret. Add this exact redirect URI in your <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">Spotify Developer app</a>:<br><code id="spotify-redirect-uri"></code><br>Development Mode requires Premium for the app owner and allows up to five authorized users; <a href="https://developer.spotify.com/documentation/web-api/concepts/quota-modes" target="_blank" rel="noreferrer">check current rules</a>.</div>
+                <p class="spotify-policy-note">Independent prototype, not Spotify-approved. Spotify policy may require written permission for a replacement-style player.</p>
+              </div>
+              <div id="spotify-controls" hidden>
+                <form class="spotify-search-row" id="spotify-search-form">
+                  <input id="spotify-search" type="search" placeholder="Search Spotify tracks" aria-label="Search Spotify tracks" autocomplete="off">
+                  <button type="submit" aria-label="Search Spotify">⌕</button>
+                </form>
+                <div class="spotify-results" id="spotify-results" aria-live="polite"></div>
+                <form class="spotify-url-row spotify-uri-form" id="spotify-open-form">
+                  <input id="spotify-url" type="text" inputmode="url" placeholder="Or paste a track link / URI" aria-label="Spotify track link or URI" autocomplete="off">
+                  <button type="submit" aria-label="Play Spotify track">PLAY</button>
+                </form>
+                <button type="button" class="spotify-disconnect" id="spotify-disconnect">Disconnect Spotify</button>
+              </div>
+              <div class="spotify-foot"><span>SPOTIFY SDK · INDEPENDENT PROTOTYPE</span><span class="legal-links"><a href="${BASE}terms.html" target="_blank" rel="noreferrer">TERMS</a><a href="${BASE}privacy.html" target="_blank" rel="noreferrer">PRIVACY</a></span></div>
             </section>
 
             <section class="library-card" id="library">
@@ -127,7 +144,7 @@ app.innerHTML = `
             <div class="lower-icon">${icon('skin', 19)}</div><div class="lower-copy"><span class="micro-label">MAKE IT YOURS / 02</span><h3>Skin it your way.</h3><p>Drop in a classic <code>.wsz</code> skin. Bitmap region masks keep the weird silhouettes intact.</p></div><button class="text-button" id="skin-bottom">Browse skins ${icon('arrow', 15)}</button>
           </div>
           <div class="lower-card provider-lower-card">
-            <div class="provider-orbit">✳</div><div class="lower-copy"><span class="micro-label">MORE SOURCES, LATER / 03</span><h3>One deck. Many worlds.</h3><p>Ampdeck plays local audio; Spotify links open in Spotify. Any future service adapter needs its own policy review.</p></div><span class="soon-label"><span class="green-led"></span> EXTENSIBLE</span>
+            <div class="provider-orbit">✳</div><div class="lower-copy"><span class="micro-label">TWO PLAYBACK MODES / 03</span><h3>One deck. Separate sources.</h3><p>Local files and Spotify use separate queues. Spotify audio is played by its official browser SDK and is never mixed with local audio.</p></div><span class="soon-label"><span class="green-led"></span> SEPARATE MODES</span>
           </div>
         </section>
         <footer class="page-footer" id="about"><span>AMPDECK © 2026</span><span>MADE FOR MUSIC LOVERS & SKIN COLLECTORS</span><span><a href="${BASE}terms.html">TERMS</a> · <a href="${BASE}privacy.html">PRIVACY</a> · <a href="https://github.com/moai-heads/ampdeck" target="_blank" rel="noreferrer">OPEN SOURCE ${icon('external', 12)}</a></span></footer>
@@ -146,6 +163,8 @@ const skinInput = get('skin-input');
 const tracks = [{ title: 'Night Shift (demo)', artist: 'Ampdeck Generator', source: 'Built-in sample', url: `${BASE}demo-loop.wav`, duration: '00:08' }];
 let webamp;
 let currentSkinUrl = null;
+let spotifyResults = [];
+let spotifyMode = false;
 let toastTimer;
 
 function toast(message, isError = false) {
@@ -162,7 +181,19 @@ function setTrackDisplay(track = {}) {
   const artist = track.metaData?.artist || track.artist || 'Local audio';
   get('track-title').textContent = title;
   get('track-artist').textContent = artist;
-  if (track.metaData?.albumArtUrl) get('mini-art').innerHTML = `<img src="${esc(track.metaData.albumArtUrl)}" alt="Album artwork">`;
+  const art = track.metaData?.albumArtUrl || `${BASE}cover.svg`;
+  get('mini-art').innerHTML = `<img src="${esc(art)}" alt="${spotifyMode ? 'Spotify album artwork' : 'Album artwork'}">`;
+  get('now-playing-source').textContent = spotifyMode ? 'SPOTIFY' : 'LOCAL AUDIO';
+  const attribution = get('spotify-attribution');
+  const spotifyUri = track.url || track.uri || '';
+  const spotifyId = spotifyUri.match(/^spotify:track:([A-Za-z0-9]+)$/)?.[1];
+  if (spotifyMode && spotifyId) {
+    attribution.href = `https://open.spotify.com/track/${spotifyId}`;
+    attribution.hidden = false;
+  } else {
+    attribution.removeAttribute('href');
+    attribution.hidden = true;
+  }
 }
 
 function renderTrackList() {
@@ -175,12 +206,7 @@ function renderTrackList() {
       <span class="track-duration">${esc(track.duration || '—')}</span>
     </button>`).join('');
   get('track-list').querySelectorAll('[data-track]').forEach((node) => {
-    node.addEventListener('click', () => {
-      const index = Number(node.dataset.track);
-      webamp?.setCurrentTrack(index);
-      webamp?.play();
-      setTrackDisplay(tracks[index]);
-    });
+    node.addEventListener('click', () => playLocalTrack(Number(node.dataset.track)));
   });
 }
 
@@ -198,6 +224,7 @@ async function setupWebamp() {
       metaData: { title: track.title, artist: track.artist, album: track.album || (index === 0 ? 'Field Recordings · 001' : 'Local library'), ...(index === 0 ? { albumArtUrl: `${location.origin}${BASE}cover.svg` } : {}) },
     })),
     enableHotkeys: false,
+    __customMediaClass: SpotifyMediaAdapter,
   });
   webamp.renderInto(get('player-host')).then(() => {
     get('skin-name').textContent = 'BASE SKIN';
@@ -210,20 +237,96 @@ async function setupWebamp() {
   });
 }
 
-function openSpotifyLink(raw = get('spotify-url').value) {
+function spotifyWebampTrack(track) {
+  const normalized = track.uri ? track : {
+    uri: track.url,
+    name: track.title,
+    artists: [{ name: track.artist }],
+    album: { name: track.album || 'Spotify', images: track.metaData?.albumArtUrl ? [{ url: track.metaData.albumArtUrl }] : [] },
+    duration_ms: track.durationSeconds ? track.durationSeconds * 1000 : 0,
+  };
+  return makeSpotifyTrack(normalized);
+}
+
+function setPlaybackSource(isSpotify) {
+  spotifyMode = isSpotify;
+  get('track-title').dataset.source = isSpotify ? 'spotify' : 'local';
+  get('track-artist').dataset.source = isSpotify ? 'spotify' : 'local';
+  get('now-playing-source').textContent = isSpotify ? 'SPOTIFY' : 'LOCAL AUDIO';
+  if (!isSpotify) get('mini-art').querySelector('img')?.setAttribute('alt', 'Local audio artwork');
+}
+
+function playLocalTrack(index) {
+  if (!webamp || !tracks.length) return;
+  const safeIndex = ((index % tracks.length) + tracks.length) % tracks.length;
+  const queue = [...tracks.slice(safeIndex), ...tracks.slice(0, safeIndex)].map((track) => ({
+    url: track.url.startsWith('blob:') ? track.url : `${location.origin}${track.url}`,
+    defaultName: track.title,
+    metaData: track.metaData || { title: track.title, artist: track.artist, album: track.album || 'Local library' },
+  }));
+  setPlaybackSource(false);
+  webamp.setTracksToPlay(queue);
+  setTrackDisplay(tracks[safeIndex]);
+}
+
+async function playSpotifyTracks(items, selectedIndex = 0) {
+  if (!webamp) throw new Error('Classic player is still starting. Try again in a moment.');
+  if (!spotifyPlayback.connected) await spotifyPlayback.connect();
+  if (!items.length) throw new Error('No Spotify tracks to play.');
+  const queue = items.map(spotifyWebampTrack);
+  const start = ((selectedIndex % queue.length) + queue.length) % queue.length;
+  const ordered = [...queue.slice(start), ...queue.slice(0, start)];
+  setPlaybackSource(true);
+  webamp.setTracksToPlay(ordered);
+  const first = ordered[0];
+  setTrackDisplay({ url: first.url, metaData: first.metaData, title: first.defaultName });
+}
+
+async function playSpotifyLink(raw = get('spotify-url').value) {
   try {
     const target = spotifyProvider.parse(raw);
-    window.open(target.canonicalUrl, '_blank', 'noopener,noreferrer');
-    toast(`Opened Spotify ${target.type} in a new tab.`);
+    if (target.type !== 'track') throw new Error('Paste a Spotify track link or track URI. Albums and playlists are not available in this first build.');
+    if (!spotifyPlayback.connected) await spotifyPlayback.connect();
+    const track = await spotifyPlayback.getTrack(target.id);
+    await playSpotifyTracks([track]);
+    get('spotify-url').value = '';
   } catch (error) {
     toast(error.message, true);
   }
 }
 
+function renderSpotifyResults(items) {
+  const host = get('spotify-results');
+  spotifyResults = items;
+  if (!items.length) {
+    host.innerHTML = '<div class="search-loading">No tracks found.</div>';
+    return;
+  }
+  host.innerHTML = items.map((track, index) => {
+    const art = track.album?.images?.[0]?.url || `${BASE}cover.svg`;
+    const trackId = track.id || track.uri?.split(':').at(-1) || '';
+    const spotifyUrl = `https://open.spotify.com/track/${encodeURIComponent(trackId)}`;
+    const artists = track.artists?.map((artist) => artist.name).join(', ') || 'Spotify';
+    const duration = Number.isFinite(track.duration_ms) ? `${String(Math.floor(track.duration_ms / 60000)).padStart(2, '0')}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}` : '—';
+    return `<div class="spotify-result">
+      <button class="spotify-result-play" type="button" data-spotify-result="${index}" aria-label="Play ${esc(track.name)} by ${esc(artists)}">
+        <img src="${esc(art)}" alt="Spotify album artwork">
+        <span><b>${esc(track.name)}</b><small>${esc(artists)} · ${duration}</small></span>
+      </button>
+      <a class="spotify-result-link" href="${esc(spotifyUrl)}" target="_blank" rel="noreferrer" aria-label="Open this track on Spotify">↗</a>
+    </div>`;
+  }).join('');
+  host.querySelectorAll('[data-spotify-result]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      try { await playSpotifyTracks(spotifyResults, Number(button.dataset.spotifyResult)); }
+      catch (error) { toast(error.message, true); }
+    });
+  });
+}
+
 async function handleAudioFiles(files) {
   const audioFiles = [...files].filter((file) => localProvider.accepts(file));
   if (!audioFiles.length) return toast('No audio files found. Drop in an audio file to add it.', true);
-  const add = [];
   for (const file of audioFiles) {
     const url = URL.createObjectURL(file);
     const duration = await new Promise((resolve) => {
@@ -237,9 +340,7 @@ async function handleAudioFiles(files) {
     });
     const track = localProvider.describe(file, url, duration);
     tracks.push(track);
-    add.push({ url, defaultName: track.title, metaData: track.metaData });
   }
-  if (webamp) webamp.appendTracks(add);
   renderTrackList();
   toast(`${audioFiles.length} track${audioFiles.length > 1 ? 's' : ''} added to your local library.`);
 }
@@ -268,6 +369,98 @@ async function loadSkin(file) {
 }
 
 
+function spotifyStatus(label, connected = false) {
+  get('spotify-status').textContent = label;
+  get('spotify-status-dot').classList.toggle('good', connected);
+  get('spotify-setup').hidden = connected;
+  get('spotify-controls').hidden = !connected;
+  get('connect-top').querySelector('span').textContent = connected ? 'Spotify connected' : 'Connect Spotify';
+  if (connected) get('spotify-copy').textContent = 'Search or paste a track. The classic skin controls Spotify playback; audio remains unmodified.';
+  else if (label === 'SPOTIFY DISCONNECTED') get('spotify-copy').textContent = 'Connect a Spotify account. Ampdeck’s classic skin drives Spotify’s Web Playback SDK; Premium is required.';
+}
+
+async function searchSpotifyTracks(query) {
+  const text = query.trim();
+  if (!text) return;
+  const host = get('spotify-results');
+  host.innerHTML = '<div class="search-loading">SEARCHING SPOTIFY…</div>';
+  try {
+    const items = await spotifyPlayback.searchTracks(text);
+    renderSpotifyResults(items);
+  } catch (error) {
+    host.innerHTML = '';
+    toast(error.message, true);
+  }
+}
+
+function setupSpotify() {
+  get('spotify-client-id').value = spotifyPlayback.clientId;
+  get('spotify-redirect-uri').textContent = spotifyPlayback.getRedirectUri();
+  get('spotify-connect-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const clientId = get('spotify-client-id').value.trim();
+      spotifyPlayback.setClientId(clientId);
+      if (spotifyPlayback.tokens?.access_token) {
+        await spotifyPlayback.connect();
+        spotifyStatus('SPOTIFY READY', true);
+      } else {
+        await spotifyPlayback.beginLogin(clientId);
+      }
+    } catch (error) { toast(error.message, true); }
+  });
+  get('connect-top').addEventListener('click', () => {
+    if (spotifyPlayback.connected) get('spotify-search').focus();
+    else {
+      get('spotify-client-id').focus();
+      get('spotify-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+  get('spotify-search-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    searchSpotifyTracks(get('spotify-search').value);
+  });
+  get('spotify-open-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    playSpotifyLink();
+  });
+  get('spotify-disconnect').addEventListener('click', async () => {
+    await spotifyPlayback.disconnect({ forget: true });
+    spotifyStatus('SPOTIFY DISCONNECTED', false);
+    get('spotify-results').innerHTML = '';
+    get('spotify-client-id').value = spotifyPlayback.clientId;
+    toast('Spotify account disconnected from this Ampdeck session.');
+  });
+  spotifyPlayback.on('status', (status) => {
+    if (status === 'ready') spotifyStatus('SPOTIFY READY', true);
+    else if (status === 'connecting') spotifyStatus('CONNECTING…', false);
+    else if (status === 'reconnecting') spotifyStatus('RECONNECTING…', false);
+    else if (status === 'disconnected') spotifyStatus('SPOTIFY DISCONNECTED', false);
+    else if (status === 'error') spotifyStatus('PLAYBACK ERROR', false);
+  });
+  spotifyPlayback.on('error', (error) => toast(error.message, true));
+  spotifyPlayback.on('state', (state) => {
+    // A pause event from Spotify may arrive while we are switching to local files.
+    // Keep Spotify metadata from overwriting the explicitly selected local source.
+    if (!spotifyMode) return;
+    const track = state?.track_window?.current_track;
+    if (!track) return;
+    setPlaybackSource(true);
+    setTrackDisplay({
+      url: track.uri,
+      metaData: {
+        title: track.name,
+        artist: track.artists?.map((artist) => artist.name).join(', ') || 'Spotify',
+        album: track.album?.name || 'Spotify',
+        albumArtUrl: track.album?.images?.[0]?.url,
+      },
+    });
+  });
+  spotifyPlayback.bootstrap().then(() => {
+    if (spotifyPlayback.connected) spotifyStatus('SPOTIFY READY', true);
+  }).catch((error) => toast(error.message, true));
+}
+
 function setTheme(theme) {
   document.body.dataset.theme = theme;
   localStorage.setItem('ampdeck.theme', theme);
@@ -283,8 +476,6 @@ function setupInteractions() {
     setTheme(order[(order.indexOf(now) + 1) % order.length]);
     toast(`Desk palette: ${document.body.dataset.theme}.`);
   });
-  get('connect-top').addEventListener('click', () => window.open('https://open.spotify.com/', '_blank', 'noopener,noreferrer'));
-  get('spotify-open-form').addEventListener('submit', (event) => { event.preventDefault(); openSpotifyLink(); });
   ['import-top', 'import-button', 'drop-target'].forEach((id) => get(id).addEventListener('click', () => audioInput.click()));
   ['skin-top', 'skin-bottom'].forEach((id) => get(id).addEventListener('click', () => skinInput.click()));
   audioInput.addEventListener('change', () => { handleAudioFiles(audioInput.files); audioInput.value = ''; });
@@ -317,4 +508,5 @@ function setupInteractions() {
 }
 
 setupInteractions();
+setupSpotify();
 setupWebamp();
